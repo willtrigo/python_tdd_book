@@ -1,0 +1,25 @@
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+bin/
+include/
+lib/
+lib64/
+lib64
+staticfiles
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+pip-selfcheck.json
+
+# DB
+*.sqlite3
+
+geckodriver.log
