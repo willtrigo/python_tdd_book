@@ -13,6 +13,7 @@ lib/
 lib64/
 lib64
 staticfiles
+.vscode
 
 # Installer logs
 pip-log.txt
