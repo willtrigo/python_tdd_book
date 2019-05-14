@@ -1,3 +1,7 @@
+"""Views of lists."""
 from django.shortcuts import render
 
-# Create your views here.
+
+def home_page():
+    """View home page."""
+    pass
