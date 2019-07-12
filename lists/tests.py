@@ -7,19 +7,8 @@ class HomePageTest(TestCase):
     """Test home page."""
 
     def test_uses_home_template(self):
-        """Resolve url of home page."""
+        """Verify root's template."""
         response = self.client.get('/')
-        self.assertTemplateUsed(response, 'home.html')
-
-    def test_home_page_returns_correct_html(self):
-        """Verify html of home page."""
-        response = self.client.get('/', data={'item_text': 'A new list item'})
-
-        html = response.content.decode('utf8')
-        self.assertTrue(html.startswith('<html>'))
-        self.assertIn('<title>To-Do lists</title>', html)
-        self.assertTrue(html.strip().endswith('</html>'))
-
         self.assertTemplateUsed(response, 'home.html')
 
     def test_can_save_a_POST_request(self):
@@ -34,22 +23,32 @@ class HomePageTest(TestCase):
         """Verify redirect after POST."""
         response = self.client.post('/', data={'item_text': 'A new list item'})
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['location'], '/')
+        self.assertEqual(response['location'],
+                         '/lists/the-only-list-in-the-world/')
 
     def test_only_saves_items_when_necessary(self):
         """Verify when is necessary to save the item."""
         self.client.get('/')
         self.assertEqual(Item.objects.count(), 0)
 
-    def test_displays_all_list_items(self):
-        """Verify items created at home page."""
+
+class ListViewTest(TestCase):
+    """Test user's view."""
+
+    def test_uses_list_template(self):
+        """Verify user's template."""
+        response = self.client.get('/lists/the-only-list-in-the-world/')
+        self.assertTemplateUsed(response, 'list.html')
+
+    def test_displays_all_items(self):
+        """Verify user's items."""
         Item.objects.create(text='itemey 1')
         Item.objects.create(text='itemey 2')
 
-        response = self.client.get('/')
+        response = self.client.get('/lists/the-only-list-in-the-world/')
 
-        self.assertIn('itemey 1', response.content.decode())
-        self.assertIn('itemey 2', response.content.decode())
+        self.assertContains(response, 'itemey 1')
+        self.assertContains(response, 'itemey 2')
 
 
 class ItemModelTest(TestCase):
