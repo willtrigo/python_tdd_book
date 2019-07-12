@@ -2,7 +2,14 @@
 from django.db import models
 
 
+class List(models.Model):
+    """Model user's list."""
+
+    pass
+
+
 class Item(models.Model):
-    """Model itens of the list."""
+    """Model user's itens."""
 
     text = models.TextField(default='')
+    list = models.ForeignKey(List, default=None)
