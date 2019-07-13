@@ -1,4 +1,4 @@
-"""Views of lists."""
+"""List's Docstring - View Configuration."""
 from django.shortcuts import redirect, render
 from lists.models import Item, List
 

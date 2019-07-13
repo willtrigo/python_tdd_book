@@ -1,4 +1,4 @@
-"""Models of lists."""
+"""List's Docstring - Models configuration."""
 from django.db import models
 
 
