@@ -2,7 +2,8 @@
 from django.test import TestCase
 from django.utils.html import escape
 
-from lists.forms import ItemForm
+from lists.forms import (DUPLICATE_ITEM_ERROR, EMPTY_ITEM_ERROR,
+                         ExistingListItemForm, ItemForm)
 from lists.models import Item, List
 
 
@@ -23,42 +24,39 @@ class HomePageTest(TestCase):
 class NewItemTest(TestCase):
     """Test new item."""
 
-    def test_can_save_a_POST_request_to_an_existing_list(self):
-        """Verify if exist user's list."""
-        other_list = List.objects.create()
-        correct_list = List.objects.create()
-
-        self.client.post(
-            f'/lists/{correct_list.id}/',
-            data={'item_text': 'A new item for an existing list'})
-
+    def test_can_save_a_POST_request(self):
+        """Verify save POST new item."""
+        self.client.post('/lists/new', data={'text': 'A new list item'})
         self.assertEqual(Item.objects.count(), 1)
         new_item = Item.objects.first()
-        self.assertEqual(new_item.text, 'A new item for an existing list')
-        self.assertEqual(new_item.list, correct_list)
+        self.assertEqual(new_item.text, 'A new list item')
 
-    def test_redirects_to_list_view(self):
-        """Verify user's redirect after create a new list."""
-        other_list = List.objects.create()
-        correct_list = List.objects.create()
-
+    def test_redirects_after_POST(self):
+        """Verify redirect after POST new item."""
         response = self.client.post(
-            f'/lists/{correct_list.id}/',
-            data={'item_text': 'A new item for an existing list'})
+            '/lists/new', data={'text': 'A new list item'})
+        new_list = List.objects.first()
+        self.assertRedirects(response, '/lists/%d/' % (new_list.id,))
 
-        self.assertRedirects(response, f'/lists/{correct_list.id}/')
-
-    def test_validation_errors_are_sent_back_to_home_page_template(self):
-        """Redirect to error home page."""
-        response = self.client.post('/lists/new', data={'item_text': ''})
+    def test_for_invalid_input_renders_home_template(self):
+        """Verify render of invalid input."""
+        response = self.client.post('/lists/new', data={'text': ''})
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'home.html')
-        expected_error = escape("You can't have an empty list item")
-        self.assertContains(response, expected_error)
+
+    def test_validation_errors_are_shown_on_home_page(self):
+        """Verify error when you input invalid input."""
+        response = self.client.post('/lists/new', data={'text': ''})
+        self.assertContains(response, escape(EMPTY_ITEM_ERROR))
+
+    def test_for_invalid_input_passes_form_to_template(self):
+        """Verify invalid input passed to form."""
+        response = self.client.post('/lists/new', data={'text': ''})
+        self.assertIsInstance(response.context['form'], ItemForm)
 
     def test_invalid_list_items_arent_saved(self):
-        """Verify if invalid item isn't saved."""
-        self.client.post('/lists/new', data={'item_text': ''})
+        """Verify if save invalid item of new item."""
+        self.client.post('/lists/new', data={'text': ''})
         self.assertEqual(List.objects.count(), 0)
         self.assertEqual(Item.objects.count(), 0)
 
@@ -67,20 +65,27 @@ class ListViewTest(TestCase):
     """Test itens in model."""
 
     def test_uses_list_template(self):
-        """Verify user's template."""
+        """Verify template of list view."""
         list_ = List.objects.create()
-        response = self.client.get(f'/lists/{list_.id}/')
+        response = self.client.get('/lists/%d/' % (list_.id,))
         self.assertTemplateUsed(response, 'list.html')
 
     def test_passes_correct_list_to_template(self):
-        """Verify correct lists with correct id."""
+        """Verify correct list."""
         other_list = List.objects.create()
         correct_list = List.objects.create()
-        response = self.client.get(f'/lists/{correct_list.id}/')
+        response = self.client.get('/lists/%d/' % (correct_list.id,))
         self.assertEqual(response.context['list'], correct_list)
 
+    def test_displays_item_form(self):
+        """Verify if exist list."""
+        list_ = List.objects.create()
+        response = self.client.get('/lists/%d/' % (list_.id,))
+        self.assertIsInstance(response.context['form'], ExistingListItemForm)
+        self.assertContains(response, 'name="text"')
+
     def test_displays_only_items_for_that_list(self):
-        """Verify user's items."""
+        """verify multiple user with different lists."""
         correct_list = List.objects.create()
         Item.objects.create(text='itemey 1', list=correct_list)
         Item.objects.create(text='itemey 2', list=correct_list)
@@ -88,7 +93,7 @@ class ListViewTest(TestCase):
         Item.objects.create(text='other list item 1', list=other_list)
         Item.objects.create(text='other list item 2', list=other_list)
 
-        response = self.client.get(f'/lists/{correct_list.id}/')
+        response = self.client.get('/lists/%d/' % (correct_list.id,))
 
         self.assertContains(response, 'itemey 1')
         self.assertContains(response, 'itemey 2')
@@ -96,13 +101,12 @@ class ListViewTest(TestCase):
         self.assertNotContains(response, 'other list item 2')
 
     def test_can_save_a_POST_request_to_an_existing_list(self):
-        """Verify save POST to an existing list."""
+        """Verify save to an existing list."""
         other_list = List.objects.create()
         correct_list = List.objects.create()
-
         self.client.post(
-            f'/lists/{correct_list.id}/',
-            data={'item_text': 'A new item for an existing list'})
+            '/lists/%d/' % (correct_list.id,),
+            data={'text': 'A new item for an existing list'})
 
         self.assertEqual(Item.objects.count(), 1)
         new_item = Item.objects.first()
@@ -110,21 +114,48 @@ class ListViewTest(TestCase):
         self.assertEqual(new_item.list, correct_list)
 
     def test_POST_redirects_to_list_view(self):
-        """Verify redirect list view."""
+        """Verify redirect of view list."""
         other_list = List.objects.create()
         correct_list = List.objects.create()
-
         response = self.client.post(
-            f'/lists/{correct_list.id}/',
-            data={'item_text': 'A new item for an existing list'})
-        self.assertRedirects(response, f'/lists/{correct_list.id}/')
+            '/lists/%d/' % (correct_list.id,),
+            data={'text': 'A new item for an existing list'})
+        self.assertRedirects(response, '/lists/%d/' % (correct_list.id,))
 
-    def test_validation_errors_end_up_on_lists_page(self):
-        """Verify error when you already have a list and commit a invalid POST."""
+    def post_invalid_input(self):
+        """Verify invalid input of view list."""
         list_ = List.objects.create()
-        response = self.client.post(
-            f'/lists/{list_.id}/', data={'item_text': ''})
+        return self.client.post('/lists/%d/' % (list_.id,), data={'text': ''})
+
+    def test_for_invalid_input_nothing_saved_to_db(self):
+        """Verify if invalid input was saved."""
+        self.post_invalid_input()
+        self.assertEqual(Item.objects.count(), 0)
+
+    def test_for_invalid_input_renders_list_template(self):
+        """Verify render of invalid input."""
+        response = self.post_invalid_input()
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'list.html')
-        expected_error = escape("You can't have an empty list item")
+
+    def test_for_invalid_input_passes_form_to_template(self):
+        """verify invalid input that was passes to form."""
+        response = self.post_invalid_input()
+        self.assertIsInstance(response.context['form'], ExistingListItemForm)
+
+    def test_for_invalid_input_shows_error_on_page(self):
+        """verify error of invalid input of the view list."""
+        response = self.post_invalid_input()
+        self.assertContains(response, escape(EMPTY_ITEM_ERROR))
+
+    def test_duplicate_item_validation_errors_end_up_on_lists_page(self):
+        """verify duplicate item of the view list."""
+        list1 = List.objects.create()
+        item1 = Item.objects.create(list=list1, text='textey')
+        response = self.client.post(
+            '/lists/%d/' % (list1.id,), data={'text': 'textey'})
+
+        expected_error = escape(DUPLICATE_ITEM_ERROR)
         self.assertContains(response, expected_error)
+        self.assertTemplateUsed(response, 'list.html')
+        self.assertEqual(Item.objects.all().count(), 1)

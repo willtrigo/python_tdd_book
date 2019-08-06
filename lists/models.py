@@ -16,3 +16,13 @@ class Item(models.Model):
 
     text = models.TextField(default='')
     list = models.ForeignKey(List, default=None)
+
+    class Meta:
+        """Set Meta item."""
+
+        ordering = ('id',)
+        unique_together = ('list', 'text')
+
+    def __str__(self):
+        """Return text item."""
+        return self.text
