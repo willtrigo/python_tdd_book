@@ -27,7 +27,7 @@ class ItemForm(forms.models.ModelForm):
         error_messages = {'text': {'required': EMPTY_ITEM_ERROR}}
 
     def save(self, for_list):
-        """Save item in the list."""
+        """Save a new item in the list."""
         self.instance.list = for_list
         return super().save()
 
@@ -49,5 +49,5 @@ class ExistingListItemForm(ItemForm):
             self._update_errors(e)
 
     def save(self):
-        """i don't know."""
+        """Save a new item if the item is a unique item in the list."""
         return forms.models.ModelForm.save(self)
